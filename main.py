@@ -2,6 +2,7 @@ import os
 from modules.task_one.revenue_analysis import load_data, melt_monthly_revenue, revenue_by_region_per_quarter, entity_total_revenue
 from modules.task_two.churn_analysis import quarterly_revenue_by_client, churn_analysis
 from modules.drag_and_drop.drag_and_drop import drag_and_drop_file
+from modules.rag_chatbot.rag_chatbot import build_vector_index_from_results, answer_question
 
 import streamlit as st
 import pandas as pd
@@ -9,6 +10,19 @@ import pandas as pd
 def main():
     st.title("Business Revenue & Client Churn Dashboard")
     st.write("Upload your Excel file and run analyses.")
+
+    # --- OpenAI API Key Input ---
+    if 'openai_api_key' not in st.session_state:
+        st.session_state['openai_api_key'] = ''
+    st.session_state['openai_api_key'] = st.text_input(
+        "Enter your OpenAI API Key (required for chatbot)",
+        type="password",
+        value=st.session_state['openai_api_key']
+    )
+    if st.session_state['openai_api_key']:
+        os.environ["OPENAI_API_KEY"] = st.session_state['openai_api_key']
+    else:
+        st.warning("Please enter your OpenAI API key above to use the chatbot.")
 
     uploaded_file = drag_and_drop_file()
     if uploaded_file is not None:
@@ -70,6 +84,30 @@ def main():
         st.dataframe(filtered_client)
         client_csv = filtered_client.to_csv(index=False).encode('utf-8')
         st.download_button("Download Client Revenue by Quarter CSV", client_csv, file_name="client_revenue_by_quarter.csv")
+
+        # --- RAG Chatbot Section ---
+        st.header("Ask Questions About Your Data (Chatbot)")
+        st.info("This chatbot uses your uploaded and processed data to answer questions. Example: 'Which entity had the highest revenue in Q2?' or 'Show churn for APAC region.'")
+
+        # Build the vector index from all results (only once per upload)
+        results_dict = {
+            'Entity Total Revenue': entity_total,
+            'Churn Analysis': churn_df,
+            'Client Revenue by Quarter': client_quarterly
+        }
+        for q, t in quarter_tables.items():
+            results_dict[f'Revenue {q}'] = t.reset_index()
+        build_vector_index_from_results(results_dict)
+
+        # Chatbot UI
+        user_question = st.text_input("Ask a question about your data:")
+        if user_question:
+            if not st.session_state['openai_api_key']:
+                st.error("Please enter your OpenAI API key above to use the chatbot.")
+            else:
+                with st.spinner("Generating answer..."):
+                    answer = answer_question(user_question)
+                st.success(answer)
 
 if __name__ == "__main__":
     main() 

@@ -1,25 +1,3 @@
-# ============================================
-# 📦 RAC Data Pipeline + Churn & Revenue Analysis
-# ============================================
-
-"""
-🔧 OVERVIEW
----------
-This Python pipeline solves:
-1. Task 1: Geographical Revenue Analysis (4 separate tables for Q1, Q2, Q3, Q4 by Entity grouped and Region)
-2. Task 2: Client Churn Analysis
-
-It also builds an RAC (Retrieval-Augmented Chatbot) using:
-- LLMs (OpenAI / HuggingFace)
-- LangChain + FAISS for retrieval
-- Streamlit for UI
-
-You can use this for:
-✅ Smart exploration of Excel/text data
-✅ Revenue/Churn reporting
-✅ Conversational Q&A
-"""
-
 # =======================
 # STEP 0: Requirements
 # =======================

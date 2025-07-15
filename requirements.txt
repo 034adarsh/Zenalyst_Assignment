@@ -1,2 +1,11 @@
 langchain==0.3.26
 pandas==2.3.1
+streamlit
+openpyxl
+langchain-community
+faiss-cpu
+sentence-transformers
+openai
+tiktoken
+scikit-learn
+torch
