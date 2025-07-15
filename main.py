@@ -7,7 +7,7 @@ import streamlit as st
 import pandas as pd
 
 def main():
-    st.title("RAC Data Pipeline: Revenue & Churn Analysis")
+    st.title("Business Revenue & Client Churn Dashboard")
     st.write("Upload your Excel file and run analyses.")
 
     uploaded_file = drag_and_drop_file()
