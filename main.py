@@ -60,7 +60,7 @@ def main():
         overall_churn_csv = overall_churn_df.to_csv(index=False).encode('utf-8')
         st.download_button("Download Overall Churn Summary CSV", overall_churn_csv, file_name="overall_churn_summary.csv")
 
-        # --- New Section: Client Lifetime Value (LTV) Table ---
+        # Client Lifetime Value (LTV) Table ---
         st.header("Client Lifetime Value (LTV)")
         # Identify month columns
         month_cols = [col for col in df.columns if col.startswith('2024')]
@@ -71,7 +71,7 @@ def main():
         ltv_csv = ltv_summary.to_csv(index=False).encode('utf-8')
         st.download_button("Download Client LTV CSV", ltv_csv, file_name="client_lifetime_value.csv")
 
-        # --- New Section: Monthly Revenue Trend (Line Chart) ---
+        # Monthly Revenue Trend (Line Chart) ---
         st.header("Monthly Revenue Trend")
         monthly_revenue = df[month_cols].sum().reset_index()
         monthly_revenue.columns = ['Month', 'Total Revenue']
@@ -80,7 +80,7 @@ def main():
         monthly_csv = monthly_revenue.to_csv(index=False).encode('utf-8')
         st.download_button("Download Monthly Revenue CSV", monthly_csv, file_name="monthly_revenue_trend.csv")
 
-        # --- New Section: Top Gaining and Losing Clients per Quarter ---
+        # Top Gaining and Losing Clients per Quarter ---
         st.header("Top Gaining and Losing Clients per Quarter")
         # Prepare quarter-month mapping
         quarter_months = {
