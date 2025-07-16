@@ -1,6 +1,6 @@
 import os
 from modules.task_one.revenue_analysis import load_data, melt_monthly_revenue, revenue_by_region_per_quarter, entity_total_revenue
-from modules.task_two.churn_analysis import quarterly_revenue_by_client, churn_analysis
+from modules.task_two.churn_analysis import overall_churn_analysis
 from modules.drag_and_drop.drag_and_drop import drag_and_drop_file
 from modules.rag_chatbot.rag_chatbot import build_vector_index_from_results, answer_question
 
@@ -52,38 +52,66 @@ def main():
         entity_csv = entity_total.to_csv(index=False).encode('utf-8')
         st.download_button("Download Entity-wise Total Revenue CSV", entity_csv, file_name="entity_total_revenue.csv")
 
-        # Task 2: Churn analysis
+        # Task 2: Churn analysis (overall summary only)
         st.header("Task 2: Client Churn Analysis")
-        client_quarterly = quarterly_revenue_by_client(df_melted)
-        churn_df = churn_analysis(client_quarterly)
+        st.subheader("Overall Churn Summary")
+        overall_churn_df = overall_churn_analysis(df)
+        st.dataframe(overall_churn_df)
+        overall_churn_csv = overall_churn_df.to_csv(index=False).encode('utf-8')
+        st.download_button("Download Overall Churn Summary CSV", overall_churn_csv, file_name="overall_churn_summary.csv")
 
-        # Filters for churn analysis
-        st.subheader("Filters for Churn Analysis")
-        region_options = sorted(churn_df['Region'].unique())
-        quarter_options = sorted(set(churn_df['From']).union(set(churn_df['To'])))
-        selected_regions = st.multiselect("Select Region(s)", region_options, default=region_options)
-        selected_quarters = st.multiselect("Select Quarter(s) (From/To)", quarter_options, default=quarter_options)
-        filtered_churn = churn_df[
-            churn_df['Region'].isin(selected_regions) &
-            (churn_df['From'].isin(selected_quarters) | churn_df['To'].isin(selected_quarters))
-        ]
-        st.dataframe(filtered_churn)
-        churn_csv = filtered_churn.to_csv(index=False).encode('utf-8')
-        st.download_button("Download Churn Analysis CSV", churn_csv, file_name="churn_analysis.csv")
+        # --- New Section: Client Lifetime Value (LTV) Table ---
+        st.header("Client Lifetime Value (LTV)")
+        # Identify month columns
+        month_cols = [col for col in df.columns if col.startswith('2024')]
+        ltv_df = df[['Customer Name'] + month_cols].copy()
+        ltv_df['Lifetime Revenue'] = ltv_df[month_cols].sum(axis=1)
+        ltv_summary = ltv_df.groupby('Customer Name')['Lifetime Revenue'].sum().reset_index().sort_values('Lifetime Revenue', ascending=False)
+        st.dataframe(ltv_summary)
+        ltv_csv = ltv_summary.to_csv(index=False).encode('utf-8')
+        st.download_button("Download Client LTV CSV", ltv_csv, file_name="client_lifetime_value.csv")
 
-        # Client-by-quarter revenue table with filters
-        st.header("Client Revenue by Quarter and Region")
-        client_region_options = sorted(client_quarterly['Region'].unique())
-        client_quarter_options = sorted(client_quarterly['Quarter'].unique())
-        selected_client_regions = st.multiselect("Select Region(s) for Client Revenue", client_region_options, default=client_region_options, key="client_region")
-        selected_client_quarters = st.multiselect("Select Quarter(s) for Client Revenue", client_quarter_options, default=client_quarter_options, key="client_quarter")
-        filtered_client = client_quarterly[
-            client_quarterly['Region'].isin(selected_client_regions) &
-            client_quarterly['Quarter'].isin(selected_client_quarters)
-        ]
-        st.dataframe(filtered_client)
-        client_csv = filtered_client.to_csv(index=False).encode('utf-8')
-        st.download_button("Download Client Revenue by Quarter CSV", client_csv, file_name="client_revenue_by_quarter.csv")
+        # --- New Section: Monthly Revenue Trend (Line Chart) ---
+        st.header("Monthly Revenue Trend")
+        monthly_revenue = df[month_cols].sum().reset_index()
+        monthly_revenue.columns = ['Month', 'Total Revenue']
+        st.line_chart(monthly_revenue.set_index('Month'))
+        st.dataframe(monthly_revenue)
+        monthly_csv = monthly_revenue.to_csv(index=False).encode('utf-8')
+        st.download_button("Download Monthly Revenue CSV", monthly_csv, file_name="monthly_revenue_trend.csv")
+
+        # --- New Section: Top Gaining and Losing Clients per Quarter ---
+        st.header("Top Gaining and Losing Clients per Quarter")
+        # Prepare quarter-month mapping
+        quarter_months = {
+            'Q1': [m for m in month_cols if '-01-' in m or '-02-' in m or '-03-' in m],
+            'Q2': [m for m in month_cols if '-04-' in m or '-05-' in m or '-06-' in m],
+            'Q3': [m for m in month_cols if '-07-' in m or '-08-' in m or '-09-' in m],
+            'Q4': [m for m in month_cols if '-10-' in m or '-11-' in m or '-12-' in m],
+        }
+        gain_loss_tables = []
+        for q_idx, q in enumerate(['Q1', 'Q2', 'Q3', 'Q4']):
+            if q_idx == 0:
+                continue  # Skip Q1 (no previous quarter)
+            prev_q = ['Q1', 'Q2', 'Q3', 'Q4'][q_idx-1]
+            # Skip if no month columns for this quarter
+            if not quarter_months[prev_q] or not quarter_months[q]:
+                continue
+            prev_rev = df[['Customer Name'] + quarter_months[prev_q]].copy()
+            prev_rev['Prev_Quarter_Revenue'] = prev_rev[quarter_months[prev_q]].sum(axis=1)
+            curr_rev = df[['Customer Name'] + quarter_months[q]].copy()
+            curr_rev['Curr_Quarter_Revenue'] = curr_rev[quarter_months[q]].sum(axis=1)
+            prev_merge = pd.DataFrame(prev_rev[['Customer Name', 'Prev_Quarter_Revenue']])
+            curr_merge = pd.DataFrame(curr_rev[['Customer Name', 'Curr_Quarter_Revenue']])
+            merged = pd.merge(prev_merge, curr_merge, on='Customer Name', how='outer').fillna(0)
+            merged['Change'] = merged['Curr_Quarter_Revenue'] - merged['Prev_Quarter_Revenue']
+            top_gainers = merged.sort_values('Change', ascending=False).head(5)
+            top_losers = merged.sort_values('Change').head(5)
+            st.subheader(f"{prev_q} to {q} - Top Gainers")
+            st.dataframe(top_gainers[['Customer Name', 'Prev_Quarter_Revenue', 'Curr_Quarter_Revenue', 'Change']])
+            st.subheader(f"{prev_q} to {q} - Top Losers")
+            st.dataframe(top_losers[['Customer Name', 'Prev_Quarter_Revenue', 'Curr_Quarter_Revenue', 'Change']])
+            gain_loss_tables.append((f"{prev_q} to {q}", top_gainers, top_losers))
 
         # --- RAG Chatbot Section ---
         st.header("Ask Questions About Your Data (Chatbot)")
@@ -92,8 +120,9 @@ def main():
         # Build the vector index from all results (only once per upload)
         results_dict = {
             'Entity Total Revenue': entity_total,
-            'Churn Analysis': churn_df,
-            'Client Revenue by Quarter': client_quarterly
+            'Overall Churn Summary': overall_churn_df,
+            'Client LTV': ltv_summary,
+            'Monthly Revenue Trend': monthly_revenue
         }
         for q, t in quarter_tables.items():
             results_dict[f'Revenue {q}'] = t.reset_index()
