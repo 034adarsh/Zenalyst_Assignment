@@ -22,7 +22,7 @@ def main():
     if st.session_state['openai_api_key']:
         os.environ["OPENAI_API_KEY"] = st.session_state['openai_api_key']
     else:
-        st.warning("Please enter your OpenAI API key above to use the chatbot.")
+        st.warning("Please enter your OpenRouter API key above to use the chatbot.")
 
     uploaded_file = drag_and_drop_file()
     if uploaded_file is not None:
