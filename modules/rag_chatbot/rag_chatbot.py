@@ -3,8 +3,9 @@ import pandas as pd
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.vectorstores import FAISS
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.llms import OpenAI
+from openai import OpenAI
 import tiktoken
+from openai.types.chat import ChatCompletionMessageParam
 
 VECTOR_DIR = "./faiss_index"
 
@@ -43,10 +44,36 @@ def retrieve_context_with_limit(query, embedding, max_tokens=2000):
         total_tokens += chunk_tokens
     return context
 
-# Answer question with context window management
-def answer_question(query, llm_temperature=0, max_context_tokens=2000):
+# Answer question with context window management using OpenRouter
+
+def answer_question(query, llm_temperature=0, max_context_tokens=2000, api_key=None, image_url=None):
     embedding = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
     context = retrieve_context_with_limit(query, embedding, max_tokens=max_context_tokens)
-    llm = OpenAI(temperature=llm_temperature)
-    prompt = f"Context:\n{context}\n\nQuestion: {query}\nAnswer:"
-    return llm(prompt) 
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=api_key,
+    )
+    msg_content = [
+        {"type": "text", "text": f"Context:\n{context}\n\nQuestion: {query}"}
+    ]
+    if image_url:
+        msg_content.append({
+            "type": "image_url",
+            "image_url": {"url": image_url}
+        })  # type: ignore
+    messages = [
+        {
+            "role": "user",
+            "content": msg_content
+        }
+    ]  # type: ignore
+    completion = client.chat.completions.create(
+        model="openai/gpt-4o-2024-11-20",
+        messages=messages,  # type: ignore
+        max_tokens=1000,
+        extra_headers={
+            "HTTP-Referer": "<YOUR_SITE_URL>",
+            "X-Title": "<YOUR_SITE_NAME>",
+        }
+    )
+    return completion.choices[0].message.content 

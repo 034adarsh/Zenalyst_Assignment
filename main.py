@@ -15,7 +15,7 @@ def main():
     if 'openai_api_key' not in st.session_state:
         st.session_state['openai_api_key'] = ''
     st.session_state['openai_api_key'] = st.text_input(
-        "Enter your OpenAI API Key (required for chatbot)",
+        "Enter your OpenRouter API Key (required for chatbot)",
         type="password",
         value=st.session_state['openai_api_key']
     )
@@ -132,10 +132,10 @@ def main():
         user_question = st.text_input("Ask a question about your data:")
         if user_question:
             if not st.session_state['openai_api_key']:
-                st.error("Please enter your OpenAI API key above to use the chatbot.")
+                st.error("Please enter your OpenRouter API key above to use the chatbot.")
             else:
                 with st.spinner("Generating answer..."):
-                    answer = answer_question(user_question)
+                    answer = answer_question(user_question, max_context_tokens=2000, api_key=st.session_state['openai_api_key'])
                 st.success(answer)
 
 if __name__ == "__main__":
