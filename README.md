@@ -1,4 +1,4 @@
-# RAC Data Pipeline: Revenue & Churn Analysis
+# Data Pipeline: Revenue & Churn Analysis
 
 ![Dashboard Screenshot](./Screenshot%202025-07-16%20at%205.09.30%E2%80%AFPM.png)
 
